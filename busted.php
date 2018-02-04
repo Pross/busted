@@ -17,10 +17,7 @@ class Storm_Busted {
 	 */
 	static protected $version_slug = 'b-modified';
 
-	/**
-	 * @var string Version string with current time to break caches.
-	 */
-	static protected $version_string;
+	static protected $priority = PHP_INT_MAX - 1;
 
 	/**
 	 * Setup hooks and vars.
@@ -33,6 +30,14 @@ class Storm_Busted {
 		add_action( 'admin_init', array( 'Storm_Busted', 'hooks' ) );
 	}
 
+	static public function get_priority() {
+		return self::$priority;
+	}
+
+	static public function get_version_slug() {
+		return self::$version_slug;
+	}
+
 	static public function hooks() {
 		/**
 		 * PHP_INT_MAX - 1 used as hook priority because many developers
@@ -40,9 +45,10 @@ class Storm_Busted {
 		 *
 		 * Extremely high priority assures we catch everything.
 		 */
-		add_action( 'wp_enqueue_scripts', __CLASS__ . '::wp_print_scripts', PHP_INT_MAX - 1 );
-		add_filter( 'stylesheet_uri', __CLASS__ . '::stylesheet_uri' );
-		add_filter( 'locale_stylesheet_uri', __CLASS__ . '::stylesheet_uri' );
+		add_action( 'wp_enqueue_scripts',    array( 'Storm_Busted', 'wp_print_scripts' ), self::get_priority() );
+		add_action( 'admin_enqueue_scripts', array( 'Storm_Busted', 'wp_print_scripts' ), self::get_priority() );
+		add_filter( 'stylesheet_uri',        array( 'Storm_Busted', 'stylesheet_uri' ),   self::get_priority() );
+		add_filter( 'locale_stylesheet_uri', array( 'Storm_Busted', 'stylesheet_uri' ),   self::get_priority() );
 	}
 
 	/**
@@ -59,7 +65,7 @@ class Storm_Busted {
 				foreach ( (array) @ $enqueue_list->registered as $handle => $script ) {
 					$modification_time = self::modification_time( $script->src );
 					if ( $modification_time ) {
-						$version = $script->ver . '-' . self::$version_slug . '-' . $modification_time;
+						$version = $script->ver . '-' . self::get_version_slug() . '-' . $modification_time;
 						$enqueue_list->registered[ $handle ]->ver = $version;
 					}
 				}
@@ -81,7 +87,7 @@ class Storm_Busted {
 	static public function stylesheet_uri( $uri ) {
 
 		if ( in_array( pathinfo( $uri, PATHINFO_EXTENSION ), array( 'css', 'js' ) ) ) {
-			$uri = add_query_arg( self::$version_slug, self::modification_time( $uri ), $uri );
+			$uri = add_query_arg( self::get_version_slug(), self::modification_time( $uri ), $uri );
 		}
 		return $uri;
 	}
