@@ -27,19 +27,22 @@ class Storm_Busted {
 	 *
 	 * @return void
 	 */
-	static public function init(){
+	static public function init() {
 
+		add_action( 'init',       array( 'Storm_Busted', 'hooks' ) );
+		add_action( 'admin_init', array( 'Storm_Busted', 'hooks' ) );
+	}
+
+	static public function hooks() {
 		/**
 		 * PHP_INT_MAX - 1 used as hook priority because many developers
 		 * use wp_print_scripts for enqueues.
 		 *
 		 * Extremely high priority assures we catch everything.
 		 */
-		add_action( 'wp_print_scripts', __CLASS__ . '::wp_print_scripts', PHP_INT_MAX - 1 );
-
+		add_action( 'wp_enqueue_scripts', __CLASS__ . '::wp_print_scripts', PHP_INT_MAX - 1 );
 		add_filter( 'stylesheet_uri', __CLASS__ . '::stylesheet_uri' );
 		add_filter( 'locale_stylesheet_uri', __CLASS__ . '::stylesheet_uri' );
-
 	}
 
 	/**
@@ -51,34 +54,22 @@ class Storm_Busted {
 
 		global $wp_scripts, $wp_styles;
 
-		foreach( array( $wp_scripts, $wp_styles ) as $enqueue_list ) {
-
+		foreach ( array( $wp_scripts, $wp_styles ) as $enqueue_list ) {
 			if ( ! isset( $enqueue_list->__busted_filtered ) && is_object( $enqueue_list ) ) {
-
-				foreach( (array) @ $enqueue_list->registered as $handle => $script ) {
-
+				foreach ( (array) @ $enqueue_list->registered as $handle => $script ) {
 					$modification_time = self::modification_time( $script->src );
-
 					if ( $modification_time ) {
-
 						$version = $script->ver . '-' . self::$version_slug . '-' . $modification_time;
-
 						$enqueue_list->registered[ $handle ]->ver = $version;
-
 					}
-
 				}
-
 				/**
 				 * wp_print_scripts runs in header in footer and when called.
 				 * Only run this modification once.
 				 */
 				$enqueue_list->__busted_filtered = true;
-
 			}
-
 		}
-
 	}
 
 	/**
@@ -90,13 +81,9 @@ class Storm_Busted {
 	static public function stylesheet_uri( $uri ) {
 
 		if ( in_array( pathinfo( $uri, PATHINFO_EXTENSION ), array( 'css', 'js' ) ) ) {
-
 			$uri = add_query_arg( self::$version_slug, self::modification_time( $uri ), $uri );
-
 		}
-
 		return $uri;
-
 	}
 
 	/**
@@ -105,21 +92,17 @@ class Storm_Busted {
 	 */
 	static public function modification_time( $src ) {
 
+		if ( defined( 'BUSTEDTESTING' ) ) {
+			return BUSTEDTESTING;
+		}
 		if ( false !== strpos( $src, content_url() ) ) {
 			$src = WP_CONTENT_DIR . str_replace( content_url(), '', $src );
 		}
-
 		$file = realpath( $src );
-
 		if ( file_exists( $file ) ) {
 			return filemtime( $file );
 		}
-
 		return false;
-
 	}
-
 }
-
-add_action( 'init', 'Storm_Busted::init' );
-add_action( 'admin_init', 'Storm_Busted::init' );
+Storm_Busted::init();
