@@ -89,7 +89,7 @@ class Storm_Busted {
 		if ( in_array( pathinfo( $uri, PATHINFO_EXTENSION ), array( 'css', 'js' ) ) ) {
 			$uri = add_query_arg( self::get_version_slug(), self::modification_time( $uri ), $uri );
 		}
-		return $uri;
+		return esc_url( $uri );
 	}
 
 	/**
